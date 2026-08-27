@@ -238,6 +238,23 @@ El mapa, reportes, rutas y BDA **no se construyen para web** en esta fase. Si el
 
 ---
 
+## ADR-017: Mapeo de categorías de incidente UI/Backend (Reporte)
+
+**Estado:** Aceptado
+
+**Contexto:** El spec de Figma de la pantalla Reporte (`18:49`) define un selector de tipos con las opciones `Bache / Vía dañada`, `Robo / Inseguridad`, `Alumbrado defectuoso`, `Acumulación de basura` y `Otro`. Sin embargo, el modelo de datos existente (`INCIDENT_TYPES` en `types/incident-report.ts`) usa los valores de enum `iluminado`, `no_iluminado`, `tenso`, `tranquilo`, que son los que consumen las funciones RPC de Supabase (`insert_incident_report`, `nearby_incident_reports`) y alimentan la seguridad de ruta (`assessRouteSafety`).
+
+**Decisión:** Mantener los valores del enum del backend (`iluminado`, `no_iluminado`, `tenso`, `tranquilo`) al presentar el selector de tipos en `app/ruta/reporte.tsx`. La pantalla se alineó visualmente al spec (tema oscuro, grid 2 columnas, estilos de tarjeta) pero sin renombrar los valores de categoría, para preservar la coherencia total con las funciones RPC y las features de seguridad de ruta.
+
+**Por qué no se usan los textos de la spec:** renombrar las categorías implicaría migrar el schema de Supabase (enum de la columna `incident_type` y las RPC) y afectaría el cálculo de seguridad de ruta y el render de reportes cercanos. Es un cambio de backend de mayor alcance, fuera del pulido visual de esta tarea.
+
+**Consecuencias:**
+- (+) Se mantiene la integridad de datos y el funcionamiento de las RPC y del mapa de seguridad.
+- (−) Los textos visibles del selector no coinciden literalmente con los de la spec de Figma.
+- (→) Si se quiere adoptar las categorías exactas de la spec, se hará una tarea aparte de migración de schema que además actualice `reporte.tsx`, `route-safety.ts` y esta decisión.
+
+---
+
 ## Historial de cambios a este documento
 
 | Fecha | Cambio |
@@ -246,3 +263,4 @@ El mapa, reportes, rutas y BDA **no se construyen para web** en esta fase. Si el
 | 2026-08-26 | ADR-005 actualizado (waitlist: email + OTP, confirmado). Agregado ADR-012 (contactos de emergencia sin diseño) |
 | 2026-08-27 | ADR-003 revisado (react-native-maps + OSM + OSRM). ADR-013 (escritura geography via RPC), ADR-014 (categorías BDA), ADR-015 (4º tab BDA) |
 | 2026-08-27 | ADR-016 (tabla emergency_contacts) |
+| 2026-08-27 | ADR-017 (mapeo de categorías de incidente UI/Backend en Reporte) |

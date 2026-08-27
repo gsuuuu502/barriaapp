@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { INCIDENT_TYPES, IncidentType } from '../../types/incident-report';
-import { insertIncidentReport } from '../../lib/queries/reports';
+import { insertIncidentReport, incidentTypeLabel } from '../../lib/queries/reports';
 
 export default function ReporteScreen() {
   const router = useRouter();
@@ -81,16 +81,23 @@ export default function ReporteScreen() {
       <View style={styles.header}>
         <SafeAreaView style={styles.headerInner}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
+            <Text style={styles.backText}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reportar en ruta</Text>
+          <Text style={styles.headerTitle}>Crear Reporte de Incidente</Text>
         </SafeAreaView>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.mapPreview}>
+          <View style={styles.mapInner}>
+            <Text style={styles.mapPin}>📍</Text>
+          </View>
+        </View>
+        <Text style={styles.mapCaption}>Punto fijado en tus coordenadas actuales</Text>
+
         <Text style={styles.sectionLabel}>¿Cómo está la zona?</Text>
 
-        <View style={styles.tagsRow}>
+        <View style={styles.tagsGrid}>
           {INCIDENT_TYPES.map((type) => {
             const active = selectedType === type;
             return (
@@ -104,24 +111,18 @@ export default function ReporteScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.tagText, active && styles.tagTextActive]}>
-                  {type === 'iluminado'
-                    ? 'Iluminado'
-                    : type === 'no_iluminado'
-                    ? 'No iluminado'
-                    : type === 'tenso'
-                    ? 'Tenso'
-                    : 'Tranquilo'}
+                  {incidentTypeLabel(type)}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <Text style={styles.sectionLabel}>Descripción (opcional)</Text>
+        <Text style={styles.sectionLabel}>Descripción corta del problema</Text>
         <TextInput
           style={styles.input}
           placeholder="Cuéntanos más sobre la zona..."
-          placeholderTextColor="#999"
+          placeholderTextColor="#666666"
           multiline
           numberOfLines={4}
           value={description}
@@ -159,7 +160,7 @@ export default function ReporteScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.submitText}>ENVIAR REPORTE</Text>
+            <Text style={styles.submitText}>Publicar Reporte Anónimo</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -170,10 +171,10 @@ export default function ReporteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E1E1E',
   },
   header: {
-    backgroundColor: '#D95C27',
+    backgroundColor: '#2A2A2A',
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
@@ -189,64 +190,90 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   backText: {
-    fontSize: 26,
-    color: '#fff',
+    fontSize: 22,
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   content: {
     padding: 20,
     paddingBottom: 40,
   },
+  mapPreview: {
+    height: 140,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#2A2A2A',
+  },
+  mapInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#252525',
+  },
+  mapPin: { fontSize: 34 },
+  mapCaption: {
+    fontSize: 12,
+    color: '#AAAAAA',
+    fontFamily: 'Inter',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   sectionLabel: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#333',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
     marginTop: 20,
     marginBottom: 12,
   },
-  tagsRow: {
+  tagsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
   tag: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-    backgroundColor: '#fff',
-    marginBottom: 4,
+    width: '47%',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tagActive: {
+    borderWidth: 2,
     borderColor: '#D95C27',
-    backgroundColor: '#D95C27',
+    backgroundColor: 'rgba(217,92,39,0.15)',
   },
   tagText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#555',
+    color: '#AAAAAA',
     fontFamily: 'Inter',
+    textAlign: 'center',
   },
   tagTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   input: {
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    borderRadius: 10,
     padding: 14,
-    minHeight: 110,
+    minHeight: 90,
     fontSize: 15,
-    color: '#333',
+    color: '#FFFFFF',
+    backgroundColor: '#1A1A1A',
     fontFamily: 'Inter',
+    textAlignVertical: 'top',
   },
   statusRow: {
     marginTop: 20,
@@ -259,23 +286,23 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#777',
+    color: '#AAAAAA',
     fontFamily: 'Inter',
   },
   statusOk: {
-    color: '#2E7D32',
+    color: '#2E9A48',
   },
   statusErr: {
-    color: '#C62828',
+    color: '#E23B2E',
   },
   errorText: {
-    color: '#C62828',
+    color: '#E23B2E',
     marginTop: 16,
     fontSize: 14,
     fontFamily: 'Inter',
   },
   successText: {
-    color: '#2E7D32',
+    color: '#2E9A48',
     marginTop: 16,
     fontSize: 15,
     fontWeight: '700',
@@ -283,8 +310,8 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     backgroundColor: '#D95C27',
-    borderRadius: 22,
-    height: 56,
+    borderRadius: 8,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 28,
@@ -293,8 +320,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   submitText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans-Bold',
   },

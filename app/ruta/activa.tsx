@@ -7,26 +7,22 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import MapView from 'react-native-maps';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import MapView, { UrlTile, Polyline, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { fetchRoute, RoutePoint } from '../../lib/services/osrm';
 import {
   assessRouteSafety,
   ColoredSegment,
-  SafetyColor,
 } from '../../lib/queries/route-safety';
 import { RouteMode, routeModeOption } from '../../types/route';
+import RouteMap from '../../components/RouteMap';
 
-const COLOR_MAP: Record<SafetyColor, string> = {
+const COLOR_MAP: Record<string, string> = {
   green: '#2E9A48',
   amber: '#FFB020',
   red: '#E23B2E',
 };
-
-type ActivaParamRecord = Record<string, string | string[] | undefined>;
-
-const DEFAULT_DELTA = 0.01;
 
 export default function ActivaScreen() {
   const router = useRouter();
@@ -128,47 +124,14 @@ export default function ActivaScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={StyleSheet.absoluteFill}
-        initialRegion={{
-          latitude: origin?.latitude ?? -12.0464,
-          longitude: origin?.longitude ?? -77.0428,
-          latitudeDelta: DEFAULT_DELTA,
-          longitudeDelta: DEFAULT_DELTA,
-        }}
-        showsUserLocation
-        showsCompass={false}
-      >
-        <UrlTile
-          urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-        />
-        {segments.map((seg, i) => (
-          <Polyline
-            key={`seg-${i}`}
-            coordinates={seg.coordinates}
-            strokeColor={COLOR_MAP[seg.color]}
-            strokeWidth={6}
-            lineCap="round"
-            lineJoin="round"
-          />
-        ))}
-        {origin && (
-          <Marker
-            coordinate={{ latitude: origin.latitude, longitude: origin.longitude }}
-            pinColor="#1f6feb"
-            title="Tú"
-          />
-        )}
-        {destination && (
-          <Marker
-            coordinate={{ latitude: destination.latitude, longitude: destination.longitude }}
-            pinColor="#D95C27"
-            title={destinationLabel}
-          />
-        )}
-      </MapView>
+      <RouteMap
+        origin={origin}
+        destination={destination}
+        route={route}
+        segments={segments}
+        destinationLabel={destinationLabel}
+        mapRef={mapRef}
+      />
 
       {loading && (
         <View style={styles.loadingOverlay}>
