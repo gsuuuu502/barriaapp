@@ -56,6 +56,30 @@ export async function deleteEmergencyContact(
   return true;
 }
 
+export async function sendAlert(): Promise<number> {
+  const ok = await ensureAnonSession();
+  if (!ok) return 0;
+  const contacts = await fetchEmergencyContacts();
+  for (const c of contacts) {
+    try {
+      await supabase
+        .from('alert_notifications')
+        .insert({
+          contact_id: c.id,
+          contact_name: c.name,
+          contact_phone: c.phone,
+          message:
+            '🚨 Alerta de emergencia: ¡Necesito ayuda! Estoy compartiendo mi ubicación contigo ahora mismo.',
+          status: 'sent',
+        })
+        .select();
+    } catch (e) {
+      console.error('Error notifying contact:', e);
+    }
+  }
+  return contacts.length;
+}
+
 function haversineMeters(
   lat1: number,
   lon1: number,

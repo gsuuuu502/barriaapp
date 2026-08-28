@@ -7,11 +7,15 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import OsmMap from '../../components/OsmMap';
 import { INCIDENT_TYPES, IncidentType } from '../../types/incident-report';
 import { insertIncidentReport, incidentTypeLabel } from '../../lib/queries/reports';
 
@@ -26,6 +30,7 @@ export default function ReporteScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -35,6 +40,17 @@ export default function ReporteScreen() {
         return;
       }
       setLocationStatus('ready');
+      try {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        setCoords({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+      } catch (e) {
+        console.error('Reporte location error:', e);
+      }
     })();
   }, []);
 
@@ -52,12 +68,16 @@ export default function ReporteScreen() {
     setSubmitting(true);
 
     try {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      let reportCoords = coords;
+      if (!reportCoords) {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        reportCoords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      }
       const ok = await insertIncidentReport({
-        long: loc.coords.longitude,
-        lat: loc.coords.latitude,
+        long: reportCoords.longitude,
+        lat: reportCoords.latitude,
         incident_type: selectedType,
         description: description.trim() || null,
       });
@@ -81,17 +101,25 @@ export default function ReporteScreen() {
       <View style={styles.header}>
         <SafeAreaView style={styles.headerInner}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>✕</Text>
+            <Ionicons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Crear Reporte de Incidente</Text>
         </SafeAreaView>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.mapPreview}>
-          <View style={styles.mapInner}>
-            <Text style={styles.mapPin}>📍</Text>
-          </View>
+          <OsmMap
+            center={coords ?? { latitude: -11.93, longitude: -77.05 }}
+            zoom={15}
+            markers={coords ? [{ latitude: coords.latitude, longitude: coords.longitude, color: '#D95C27' }] : []}
+            interactive
+            onCenterChange={(c) => setCoords(c)}
+          />
         </View>
         <Text style={styles.mapCaption}>Punto fijado en tus coordenadas actuales</Text>
 
@@ -164,6 +192,7 @@ export default function ReporteScreen() {
           )}
         </Pressable>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -171,33 +200,37 @@ export default function ReporteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#F8F9FA',
   },
+  flex: { flex: 1 },
   header: {
-    backgroundColor: '#2A2A2A',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F2',
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    zIndex: 5,
   },
   headerInner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   backBtn: {
     padding: 8,
     marginRight: 8,
   },
-  backText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-  },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: '#111827',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   content: {
@@ -208,18 +241,19 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   mapInner: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#252525',
+    backgroundColor: '#F3F4F6',
   },
-  mapPin: { fontSize: 34 },
   mapCaption: {
     fontSize: 12,
-    color: '#AAAAAA',
+    color: '#6B7280',
     fontFamily: 'Inter',
     textAlign: 'center',
     marginTop: 8,
@@ -227,7 +261,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#111827',
     fontFamily: 'Inter',
     marginTop: 20,
     marginBottom: 12,
@@ -243,35 +277,35 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#3A3A3A',
-    backgroundColor: '#2A2A2A',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tagActive: {
     borderWidth: 2,
     borderColor: '#D95C27',
-    backgroundColor: 'rgba(217,92,39,0.15)',
+    backgroundColor: '#FFF1E6',
   },
   tagText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#AAAAAA',
+    color: '#6B7280',
     fontFamily: 'Inter',
     textAlign: 'center',
   },
   tagTextActive: {
-    color: '#FFFFFF',
+    color: '#D95C27',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     padding: 14,
     minHeight: 90,
     fontSize: 15,
-    color: '#FFFFFF',
-    backgroundColor: '#1A1A1A',
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
     fontFamily: 'Inter',
     textAlignVertical: 'top',
   },
@@ -286,7 +320,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#AAAAAA',
+    color: '#6B7280',
     fontFamily: 'Inter',
   },
   statusOk: {
@@ -310,18 +344,23 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     backgroundColor: '#D95C27',
-    borderRadius: 8,
-    height: 48,
+    borderRadius: 14,
+    height: 46,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 24,
+    shadowColor: '#D95C27',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   submitBtnDisabled: {
     opacity: 0.7,
   },
   submitText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'PlusJakartaSans-Bold',
   },

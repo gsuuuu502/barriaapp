@@ -5,12 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { joinWaitlist, claimWaitlistBenefit } from '../lib/queries/waitlist';
 
@@ -62,7 +63,7 @@ export default function WaitlistScreen() {
         <View style={styles.header}>
           <SafeAreaView style={styles.headerInner}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
+              <Ionicons name="arrow-back" size={24} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Beneficio Waitlist</Text>
           </SafeAreaView>
@@ -70,18 +71,18 @@ export default function WaitlistScreen() {
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.heroCard}>
-            <Text style={styles.heroIcon}>🎁</Text>
+            <Ionicons name="gift-outline" size={40} color="#D95C27" />
             <Text style={styles.heroTitle}>Sé de los primeros 500</Text>
             <Text style={styles.heroText}>
-              Regístrate con tu email para obtener acceso temprano al beneficio de BarrIA.
+              Regístrate con tu email para obtener acceso temprano al beneficio de Barria.
             </Text>
           </View>
 
           {claimed ? (
             <View style={styles.successCard}>
-              <Text style={styles.successTitle}>✓ Beneficio reclamado</Text>
+              <Text style={styles.successTitle}>Beneficio reclamado</Text>
               <Text style={styles.successText}>
-                Tu beneficio quedó vinculado a tu cuenta. ¡Gracias por confiar en BarrIA!
+                Tu beneficio quedó vinculado a tu cuenta. ¡Gracias por confiar en Barria!
               </Text>
             </View>
           ) : (
@@ -114,7 +115,7 @@ export default function WaitlistScreen() {
                 <View style={styles.statusCard}>
                   <Text style={styles.statusText}>
                     {result.granted
-                      ? `🎉 Estás en la posición #${result.position} de los primeros 500.`
+                      ? `Estás en la posición #${result.position} de los primeros 500.`
                       : `Llegaste a la posición #${result.position}.`}
                   </Text>
                   {result.granted && !claimed && (
@@ -147,7 +148,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
-    backgroundColor: '#D95C27',
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#E5E7EB',
+    borderBottomWidth: 1,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
@@ -159,11 +162,10 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   backBtn: { padding: 8, marginRight: 8 },
-  backText: { fontSize: 26, color: '#fff', fontFamily: 'Inter' },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#fff',
+    color: '#111827',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   content: { padding: 20 },
@@ -174,7 +176,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  heroIcon: { fontSize: 40, marginBottom: 8 },
   heroTitle: {
     fontSize: 20,
     fontWeight: '800',

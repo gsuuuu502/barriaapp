@@ -1,10 +1,20 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import OsmMap from './OsmMap';
 
-export default function MapViewPlaceholder() {
+interface Props {
+  center?: { latitude: number; longitude: number };
+  onCenterChange?: (center: { latitude: number; longitude: number }) => void;
+}
+
+export default function MapViewPlaceholder({ center, onCenterChange }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Mapa en vivo (próximamente)</Text>
-      <Text style={styles.subtext}>MapLibre GL + OpenStreetMap</Text>
+      <OsmMap interactive zoom={13} center={center} onCenterChange={onCenterChange} />
+      <View style={styles.crosshair} pointerEvents="none">
+        <View style={styles.crosshairRing}>
+          <View style={styles.crosshairDot} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -12,18 +22,31 @@ export default function MapViewPlaceholder() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8E8E8',
-    justifyContent: 'center',
+    width: '100%',
+  },
+  crosshair: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  text: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
+  crosshairRing: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#D95C27',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtext: {
-    fontSize: 12,
-    color: '#999',
+  crosshairDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D95C27',
   },
 });

@@ -5,8 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import MapView from 'react-native-maps';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -27,6 +29,7 @@ const COLOR_MAP: Record<string, string> = {
 export default function ActivaScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   const rawMode = params.mode;
   const mode: RouteMode = rawMode === 'buena_iluminacion' || rawMode === 'comisarias_cerca'
@@ -115,11 +118,6 @@ export default function ActivaScreen() {
   }, [params.mode]);
 
   const handleFinalizar = () => router.back();
-  const handleCambiarRuta = () =>
-    router.push({
-      pathname: '/ruta/buscar',
-      params: destination ? { dlat: destination.latitude, dlng: destination.longitude } : {},
-    });
   const handleReportar = () => router.push('/ruta/reporte');
 
   return (
@@ -148,9 +146,18 @@ export default function ActivaScreen() {
         </View>
       )}
 
-      <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-        <View style={styles.modePill}>
-          <Text style={styles.modeIcon}>{modeOption.icon}</Text>
+      <SafeAreaView
+        style={styles.safeArea}
+        pointerEvents="box-none"
+      >
+        <View style={[styles.modePill, { marginTop: insets.top + 12 }]}>
+          <View style={styles.modeIconBadge}>
+            <Ionicons
+              name={modeOption.icon as ComponentProps<typeof Ionicons>['name']}
+              size={24}
+              color="#FFFFFF"
+            />
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.modeLabel}>{modeOption.label}</Text>
             {route.length > 0 ? (
@@ -161,7 +168,7 @@ export default function ActivaScreen() {
           </View>
         </View>
 
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
           <Text style={styles.hint}>
             Los tramos se colorean según la seguridad de la zona
           </Text>
@@ -173,9 +180,6 @@ export default function ActivaScreen() {
           <View style={styles.actions}>
             <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={handleFinalizar}>
               <Text style={styles.btnGhostText}>Finalizar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={handleCambiarRuta}>
-              <Text style={styles.btnSecondaryText}>Cambiar Ruta</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleReportar}>
               <Text style={styles.btnPrimaryText}>Reportar</Text>
@@ -205,23 +209,31 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
   },
   modePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    backgroundColor: '#fff',
-    borderRadius: 18,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    marginHorizontal: 16,
     shadowColor: '#000',
     shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 5,
   },
-  modeIcon: { fontSize: 26, marginRight: 12 },
+  modeIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#D95C27',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   modeLabel: {
     fontSize: 16,
     fontWeight: '800',
@@ -235,11 +247,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bottomBar: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 22,
+    marginHorizontal: 16,
+    marginBottom: 20,
     padding: 16,
-    paddingBottom: 28,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
   },
   hint: {
     fontSize: 13,
@@ -260,25 +277,26 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10 },
   btn: {
     flex: 1,
-    height: 52,
-    borderRadius: 22,
+    height: 44,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   btnGhost: {
     borderWidth: 2,
     borderColor: '#ddd',
     backgroundColor: '#fff',
   },
-  btnGhostText: { fontSize: 15, fontWeight: '700', color: '#444', fontFamily: 'Inter' },
-  btnSecondary: {
-    backgroundColor: '#FFB020',
-  },
-  btnSecondaryText: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Inter' },
+  btnGhostText: { fontSize: 14, fontWeight: '700', color: '#444', fontFamily: 'Inter' },
   btnPrimary: {
     backgroundColor: '#D95C27',
   },
-  btnPrimaryText: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Inter' },
+  btnPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff', fontFamily: 'Inter' },
   loadingOverlay: {
     position: 'absolute',
     top: 0,

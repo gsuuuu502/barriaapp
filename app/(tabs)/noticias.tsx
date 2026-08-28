@@ -1,16 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { fetchNewsItems } from '../../lib/queries/news';
 import { NewsItem } from '../../types/news-item';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 function formatPublished(iso: string): string {
   const d = new Date(iso);
@@ -51,7 +55,7 @@ export default function NoticiasScreen() {
             <Image source={{ uri: item.image_url }} style={styles.thumb} />
           ) : (
             <View style={styles.thumbPlaceholder}>
-              <Text style={styles.thumbGlyph}>📰</Text>
+              <Ionicons name="newspaper-outline" size={28} color="#9CA3AF" />
             </View>
           )}
           <View style={styles.rowBody}>
@@ -76,7 +80,7 @@ export default function NoticiasScreen() {
         <SafeAreaView>
           <Text style={styles.headerTitle}>Noticias y Novedades</Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Distrito: Comas / Carabayllo</Text>
+            <Text style={styles.badgeText}>Avisos de tu barrio</Text>
           </View>
         </SafeAreaView>
       </View>
@@ -101,7 +105,7 @@ export default function NoticiasScreen() {
                 <Image source={{ uri: featured.image_url }} style={styles.featuredImage} />
               ) : (
                 <View style={styles.featuredImagePlaceholder}>
-                  <Text style={styles.featuredGlyph}>📰</Text>
+                  <Ionicons name="newspaper-outline" size={44} color="#9CA3AF" />
                 </View>
               )}
               <View style={styles.featuredOverlay}>
@@ -124,28 +128,28 @@ export default function NoticiasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1E1E1E' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
-    backgroundColor: '#2A2A2A',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F2',
     paddingHorizontal: 20,
-    paddingBottom: 18,
-    overflow: 'hidden',
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#111827',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#252525',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 4,
   },
   badgeText: { fontSize: 12, color: '#D95C27', fontWeight: '600', fontFamily: 'Inter' },
   centered: {
@@ -154,24 +158,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyText: { fontSize: 15, color: '#999999', fontFamily: 'Inter' },
+  emptyText: { fontSize: 15, color: '#6B7280', fontFamily: 'Inter' },
   list: { padding: 16 },
   featured: {
     height: 180,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   featuredImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   featuredImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featuredGlyph: { fontSize: 44 },
   featuredOverlay: {
     position: 'absolute',
     top: 0,
@@ -199,40 +209,46 @@ const styles = StyleSheet.create({
   },
   featuredDate: {
     fontSize: 12,
-    color: '#CCCCCC',
+    color: '#E5E7EB',
     marginTop: 4,
     fontFamily: 'Inter',
   },
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     padding: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#EDEFF2',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   thumb: { width: 80, height: 80, borderRadius: 8, resizeMode: 'cover' },
   thumbPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  thumbGlyph: { fontSize: 28 },
   rowBody: { flex: 1, marginLeft: 14 },
   rowCategory: { fontSize: 11, fontWeight: '700', color: '#D95C27', fontFamily: 'Inter', letterSpacing: 0.5 },
   rowTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     fontFamily: 'Inter',
     marginTop: 3,
   },
   rowDescription: {
     fontSize: 12,
-    color: '#999999',
+    color: '#6B7280',
     fontFamily: 'Inter',
     marginTop: 3,
   },

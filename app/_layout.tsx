@@ -2,11 +2,24 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
+import { PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function RootLayout() {
   const { setUser, setLoading, isLoading } = useAuthStore();
+
+  const [fontsLoaded] = useFonts({
+    Inter: Inter_400Regular,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+    'Inter-ExtraBold': Inter_800ExtraBold,
+    PlusJakartaSans: PlusJakartaSans_600SemiBold,
+    'PlusJakartaSans-Bold': PlusJakartaSans_700Bold,
+    'PlusJakartaSans-ExtraBold': PlusJakartaSans_800ExtraBold,
+  });
 
   useEffect(() => {
     const initAuth = async () => {
@@ -32,7 +45,7 @@ export default function RootLayout() {
     initAuth();
   }, []);
 
-  if (isLoading) {
+  if (isLoading || !fontsLoaded) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#D95C27" />
@@ -41,17 +54,17 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="ruta/buscar" />
         <Stack.Screen name="ruta/activa" />
         <Stack.Screen name="ruta/reporte" />
         <Stack.Screen name="emergencia" />
         <Stack.Screen name="waitlist" />
+        <Stack.Screen name="configuracion" />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
 

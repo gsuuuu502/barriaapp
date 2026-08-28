@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Modal,
   ActivityIndicator,
-  SafeAreaView,
   Pressable,
+  ScrollView,
+  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { useFocusEffect } from 'expo-router';
 import * as Location from 'expo-location';
 import {
@@ -46,9 +49,10 @@ const FILTERS: { id: FeedCategory | 'todas'; label: string }[] = [
   { id: 'otro', label: 'Otro' },
 ];
 
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
 export default function BdaScreen() {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
+  const [posts, setPosts] = useState<FeedPost[]>([]);  const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
   const [myFlags, setMyFlags] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FeedCategory | 'todas'>('todas');
@@ -58,6 +62,16 @@ export default function BdaScreen() {
   const [content, setContent] = useState('');
   const [locationStatus, setLocationStatus] = useState<'loading' | 'ready' | 'denied'>('loading');
   const [posting, setPosting] = useState(false);
+
+  const composerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(composerAnim, {
+      toValue: composerOpen ? 1 : 0,
+      duration: 240,
+      useNativeDriver: false,
+    }).start();
+  }, [composerOpen, composerAnim]);
 
   const reload = useCallback(async () => {
     const [feed, reactions] = await Promise.all([
@@ -157,7 +171,7 @@ export default function BdaScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.catIcon}>
-                <Text style={styles.catIconText}>{cat.icon}</Text>
+                <Ionicons name={cat.icon as IconName} size={22} color="#D95C27" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.catLabel}>{cat.label.toUpperCase()}</Text>
@@ -167,7 +181,7 @@ export default function BdaScreen() {
             <Text style={styles.cardContent}>{item.content}</Text>
             {hasLocation ? (
               <View style={styles.cardFooter}>
-                <Text style={styles.pinIcon}>📍</Text>
+                <Ionicons name="location-outline" size={14} color="#D95C27" />
                 <Text style={styles.locationLink}>Ver ubicación en mapa</Text>
               </View>
             ) : null}
@@ -177,8 +191,13 @@ export default function BdaScreen() {
                 onPress={() => handleReaction(item.id, 'like')}
                 activeOpacity={0.7}
               >
+                <Ionicons
+                  name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+                  size={16}
+                  color={liked ? '#D95C27' : '#6B7280'}
+                />
                 <Text style={[styles.actionText, liked && styles.actionTextActive]}>
-                  👍 {item.like_count}
+                  {' '}{item.like_count}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -186,8 +205,13 @@ export default function BdaScreen() {
                 onPress={() => handleReaction(item.id, 'flag')}
                 activeOpacity={0.7}
               >
+                <Ionicons
+                  name={flagged ? 'flag' : 'flag-outline'}
+                  size={16}
+                  color={flagged ? '#D95C27' : '#6B7280'}
+                />
                 <Text style={[styles.actionText, flagged && styles.actionTextFlag]}>
-                  🚩 {item.flag_count}
+                  {' '}{item.flag_count}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -201,8 +225,109 @@ export default function BdaScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <SafeAreaView>
-          <Text style={styles.headerTitle}>Publicaciones Comunitarias</Text>
-          <Text style={styles.headerSubtitle}>Espacio de interacción vecinal en Lima Norte</Text>
+          <View style={styles.headerTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Reportes</Text>
+              <Text style={styles.headerSubtitle}>Reportes de seguridad del barrio</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => (composerOpen ? setComposerOpen(false) : openComposer())}
+              style={styles.headerAddBtn}
+              hitSlop={12}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={composerOpen ? 'close' : 'add'} size={26} color="#D95C27" />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View
+            style={[
+              styles.composerInline,
+              {
+                maxHeight: composerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 420],
+                }),
+                opacity: composerAnim,
+                transform: [
+                  {
+                    translateY: composerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-16, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={composerOpen ? 'auto' : 'none'}
+          >
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalLabel}>Categoría</Text>
+              <View style={styles.catChips}>
+                {FEED_CATEGORIES.map((c) => {
+                  const active = category === c;
+                  const opt = feedCategoryOption(c);
+                  return (
+                    <TouchableOpacity
+                      key={c}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setCategory(c)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={opt.icon as IconName} size={16} color={active ? '#D95C27' : '#6B7280'} />
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.modalLabel}>Contenido</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Describe el reporte..."
+                placeholderTextColor="#666"
+                multiline
+                numberOfLines={3}
+                value={content}
+                onChangeText={setContent}
+                textAlignVertical="top"
+              />
+
+              <View style={styles.locationRow}>
+                {locationStatus === 'loading' && <ActivityIndicator size="small" color="#D95C27" />}
+                <Text style={styles.locationText}>
+                  {locationStatus === 'ready'
+                    ? '✓ Ubicación lista'
+                    : locationStatus === 'denied'
+                    ? 'Permiso de ubicación denegado'
+                    : 'Obteniendo ubicación...'}
+                </Text>
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setComposerOpen(false)}>
+                  <Text style={styles.cancelText}>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalBtn, styles.submitBtn, (posting || locationStatus !== 'ready') && styles.submitDisabled]}
+                  onPress={handlePost}
+                  disabled={posting || locationStatus !== 'ready'}
+                >
+                  {posting ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.submitText}>PUBLICAR</Text>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </Animated.View>
         </SafeAreaView>
       </View>
 
@@ -252,114 +377,63 @@ export default function BdaScreen() {
       )}
 
       <SafeAreaView style={styles.fabSafe}>
-        <TouchableOpacity style={styles.fab} onPress={openComposer} activeOpacity={0.85}>
-          <Text style={styles.fabPlus}>+</Text>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => (composerOpen ? setComposerOpen(false) : openComposer())}
+          activeOpacity={0.85}
+        >
+          <Ionicons name={composerOpen ? 'close' : 'add'} size={30} color="#FFF" />
         </TouchableOpacity>
       </SafeAreaView>
-
-      <Modal
-        visible={composerOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setComposerOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Nuevo reporte</Text>
-
-            <Text style={styles.modalLabel}>Categoría</Text>
-            <View style={styles.catChips}>
-              {FEED_CATEGORIES.map((c) => {
-                const active = category === c;
-                const opt = feedCategoryOption(c);
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => setCategory(c)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.chipIcon}>{opt.icon}</Text>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text style={styles.modalLabel}>Contenido</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Describe el reporte..."
-              placeholderTextColor="#666"
-              multiline
-              numberOfLines={4}
-              value={content}
-              onChangeText={setContent}
-              textAlignVertical="top"
-            />
-
-            <View style={styles.locationRow}>
-              {locationStatus === 'loading' && (
-                <ActivityIndicator size="small" color="#D95C27" />
-              )}
-              <Text style={styles.locationText}>
-                {locationStatus === 'ready'
-                  ? '✓ Ubicación lista'
-                  : locationStatus === 'denied'
-                  ? 'Permiso de ubicación denegado'
-                  : 'Obteniendo ubicación...'}
-              </Text>
-            </View>
-
-            <View style={styles.modalActions}>
-              <Pressable style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setComposerOpen(false)}>
-                <Text style={styles.cancelText}>Cancelar</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, styles.submitBtn, (posting || locationStatus !== 'ready') && styles.submitDisabled]}
-                onPress={handlePost}
-                disabled={posting || locationStatus !== 'ready'}
-              >
-                {posting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitText}>PUBLICAR</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1E1E1E' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
-    backgroundColor: '#2A2A2A',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F2',
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
     overflow: 'hidden',
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerAddBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF1E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: '#AAAAAA',
+    fontSize: 12,
+    color: '#6B7280',
     fontFamily: 'Inter',
     marginTop: 2,
   },
+  composerInline: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF0F2',
+  },
   filtersRow: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#F8F9FA',
     paddingTop: 12,
   },
   filtersContent: { paddingHorizontal: 16, gap: 8 },
@@ -367,14 +441,14 @@ const styles = StyleSheet.create({
     height: 36,
     paddingHorizontal: 16,
     borderRadius: 18,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   filterChipActive: { backgroundColor: '#D95C27', borderColor: '#D95C27' },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#AAAAAA', fontFamily: 'Inter' },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#6B7280', fontFamily: 'Inter' },
   filterChipTextActive: { color: '#FFFFFF' },
   centered: {
     flex: 1,
@@ -382,19 +456,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  list: { padding: 16, paddingBottom: 110 },
+  list: { padding: 16, paddingBottom: 130 },
   card: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EDEFF2',
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   catIcon: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFF1E6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -407,11 +488,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     letterSpacing: 0.5,
   },
-  time: { fontSize: 12, color: '#777777', fontFamily: 'Inter' },
+  time: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter' },
   cardContent: {
     fontSize: 15,
     lineHeight: 20,
-    color: '#EEEEEE',
+    color: '#111827',
     fontFamily: 'Inter',
   },
   cardFooter: {
@@ -429,16 +510,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#F3F4F6',
   },
-  actionBtnActive: { backgroundColor: 'rgba(217,92,39,0.2)' },
-  actionBtnFlag: { backgroundColor: 'rgba(217,92,39,0.2)' },
-  actionText: { fontSize: 14, fontWeight: '600', color: '#AAAAAA', fontFamily: 'Inter' },
+  actionBtnActive: { backgroundColor: '#FFF1E6' },
+  actionBtnFlag: { backgroundColor: '#FFF1E6' },
+  actionText: { fontSize: 14, fontWeight: '600', color: '#6B7280', fontFamily: 'Inter' },
   actionTextActive: { color: '#D95C27' },
   actionTextFlag: { color: '#D95C27' },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#EEEEEE', fontFamily: 'Inter' },
-  emptyText: { fontSize: 14, color: '#999999', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' },
-  fabSafe: { position: 'absolute', right: 20, bottom: 24 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#111827', fontFamily: 'Inter' },
+  emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' },
+  fabSafe: { position: 'absolute', right: 20, bottom: 100 },
   fab: {
     width: 56,
     height: 56,
@@ -455,18 +536,33 @@ const styles = StyleSheet.create({
   fabPlus: { color: '#FFFFFF', fontSize: 28, fontWeight: '600', lineHeight: 32 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  kav: { justifyContent: 'flex-end' },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   modalSheet: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    maxHeight: '90%',
   },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', fontFamily: 'PlusJakartaSans-Bold' },
-  modalLabel: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Inter', marginTop: 16, marginBottom: 10 },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  closeBtn: { padding: 8 },
+  modalContent: { paddingBottom: 24 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827', fontFamily: 'PlusJakartaSans-Bold' },
+  modalLabel: { fontSize: 15, fontWeight: '700', color: '#111827', fontFamily: 'Inter', marginTop: 16, marginBottom: 10 },
   catChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
@@ -475,37 +571,37 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#3A3A3A',
-    backgroundColor: '#2A2A2A',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
-  chipActive: { borderColor: '#D95C27', backgroundColor: 'rgba(217,92,39,0.15)' },
+  chipActive: { borderColor: '#D95C27', backgroundColor: '#FFF1E6' },
   chipIcon: { fontSize: 16, marginRight: 6 },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#AAAAAA', fontFamily: 'Inter' },
-  chipTextActive: { color: '#FFFFFF' },
+  chipText: { fontSize: 14, fontWeight: '600', color: '#6B7280', fontFamily: 'Inter' },
+  chipTextActive: { color: '#D95C27' },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: '#E5E7EB',
     borderRadius: 14,
     padding: 12,
     minHeight: 100,
     fontSize: 15,
-    color: '#FFFFFF',
-    backgroundColor: '#1A1A1A',
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
     fontFamily: 'Inter',
     textAlignVertical: 'top',
   },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 8 },
-  locationText: { fontSize: 13, color: '#AAAAAA', fontFamily: 'Inter' },
+  locationText: { fontSize: 13, color: '#6B7280', fontFamily: 'Inter' },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
   modalBtn: {
     flex: 1,
-    height: 50,
-    borderRadius: 22,
+    height: 46,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cancelBtn: { borderWidth: 1, borderColor: '#3A3A3A', backgroundColor: '#2A2A2A' },
-  cancelText: { fontSize: 15, fontWeight: '700', color: '#AAAAAA', fontFamily: 'Inter' },
+  cancelBtn: { borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F3F4F6' },
+  cancelText: { fontSize: 15, fontWeight: '700', color: '#374151', fontFamily: 'Inter' },
   submitBtn: { backgroundColor: '#D95C27' },
   submitDisabled: { opacity: 0.6 },
   submitText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', fontFamily: 'PlusJakartaSans-Bold' },

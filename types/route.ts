@@ -18,19 +18,19 @@ export const ROUTE_MODE_OPTIONS: RouteModeOption[] = [
     id: 'buena_iluminacion',
     label: 'Buena iluminación',
     description: 'Prioriza zonas iluminadas',
-    icon: '💡',
+    icon: 'bulb',
   },
   {
     id: 'comisarias_cerca',
     label: 'Comisarías Cerca',
     description: 'Cercanía a comisarías',
-    icon: '🚓',
+    icon: 'shield-checkmark',
   },
   {
     id: 'balance',
     label: 'Balance Rápido y Seguro',
     description: 'Equilibrio tiempo y seguridad',
-    icon: '⚖️',
+    icon: 'scale',
   },
 ];
 

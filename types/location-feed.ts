@@ -18,10 +18,10 @@ export interface FeedCategoryOption {
 }
 
 export const FEED_CATEGORY_OPTIONS: FeedCategoryOption[] = [
-  { id: 'restaurantes', label: 'Restaurantes', icon: '🍽️' },
-  { id: 'hospitales', label: 'Hospitales', icon: '🏥' },
-  { id: 'comisarias', label: 'Comisarías', icon: '🚓' },
-  { id: 'otro', label: 'Otro', icon: '📍' },
+  { id: 'restaurantes', label: 'Restaurantes', icon: 'restaurant' },
+  { id: 'hospitales', label: 'Hospitales', icon: 'medkit' },
+  { id: 'comisarias', label: 'Comisarías', icon: 'shield-checkmark' },
+  { id: 'otro', label: 'Otro', icon: 'location' },
 ];
 
 export function feedCategoryOption(c: FeedCategory): FeedCategoryOption {

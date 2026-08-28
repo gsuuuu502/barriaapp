@@ -1,29 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Modal,
   TextInput,
   ScrollView,
   Linking,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import {
   fetchEmergencyContacts,
   addEmergencyContact,
   deleteEmergencyContact,
   findNearestPlace,
+  sendAlert,
 } from '../lib/queries/emergency';
 import { EmergencyContact, NearbyPlace } from '../types/emergency';
 
 export default function EmergenciaScreen() {
   const router = useRouter();
+  const { sent } = useLocalSearchParams();
 
   const [nearby, setNearby] = useState<NearbyPlace | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
@@ -34,7 +40,18 @@ export default function EmergenciaScreen() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [alertSent, setAlertSent] = useState(false);
+  const [alertSent, setAlertSent] = useState<boolean>(sent === '1');
+  const [sending, setSending] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: contactsOpen ? 0.45 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [contactsOpen, fadeAnim]);
 
   const loadContacts = async () => {
     const list = await fetchEmergencyContacts();
@@ -70,8 +87,15 @@ export default function EmergenciaScreen() {
   };
 
   const handleSendAlert = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await sendAlert();
+    } catch (e) {
+      console.error('Send alert error:', e);
+    }
+    setSending(false);
     setAlertSent(true);
-    setTimeout(() => setAlertSent(false), 4000);
   };
 
   const handleAddContact = async () => {
@@ -102,20 +126,41 @@ export default function EmergenciaScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <SafeAreaView style={styles.headerInner}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+            <Ionicons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Emergencia</Text>
         </SafeAreaView>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {alertSent && (
+          <View style={styles.alertCard}>
+            <View style={styles.alertCheck}>
+              <Ionicons name="checkmark" size={22} color="#fff" />
+            </View>
+            <View style={styles.alertBody}>
+              <Text style={styles.alertTitle}>Alerta enviada</Text>
+              <Text style={styles.alertText}>
+                Alerta enviada a tus contactos de emergencia
+              </Text>
+            </View>
+          </View>
+        )}
+
         <Text style={styles.sectionLabel}>Centro más cercano</Text>
         {nearby ? (
           <View style={styles.placeCard}>
-            <Text style={styles.placeBadge}>
-              {nearby.place.type === 'comisaria' ? '🚓 COMISARÍA' : '🏥 HOSPITAL'}
-            </Text>
+            <View style={styles.placeBadgeRow}>
+              <Ionicons
+                name={nearby.place.type === 'comisaria' ? 'shield' : 'medkit'}
+                size={15}
+                color="#D95C27"
+              />
+              <Text style={styles.placeBadge}>
+                {nearby.place.type === 'comisaria' ? 'COMISARÍA' : 'HOSPITAL'}
+              </Text>
+            </View>
             <Text style={styles.placeName}>{nearby.place.name}</Text>
             <Text style={styles.placeDist}>
               ≈ {Math.round(nearby.distanceMeters / 10) / 100} km de ti
@@ -125,7 +170,8 @@ export default function EmergenciaScreen() {
               onPress={() => handleCall(nearby.place.phone)}
               activeOpacity={0.7}
             >
-              <Text style={styles.callBtnText}>📞 Llamar</Text>
+              <Ionicons name="call" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.callBtnText}>Llamar</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -163,8 +209,9 @@ export default function EmergenciaScreen() {
           onPress={handleSendAlert}
           activeOpacity={0.8}
         >
+          {!sending && <Ionicons name="alert" size={22} color="#fff" style={{ marginRight: 8 }} />}
           <Text style={styles.sendBtnText}>
-            {alertSent ? '✓ Alerta enviada (simulada)' : '🚨 ENVIAR ALERTA'}
+            {sending ? 'Enviando…' : 'ENVIAR ALERTA'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -176,6 +223,12 @@ export default function EmergenciaScreen() {
         onRequestClose={() => setContactsOpen(false)}
       >
         <View style={styles.modalOverlay}>
+          <Animated.View style={[StyleSheet.absoluteFill, styles.modalBackdrop, { opacity: fadeAnim }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setContactsOpen(false)} />
+          </Animated.View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Contactos de emergencia</Text>
 
@@ -251,6 +304,7 @@ export default function EmergenciaScreen() {
               <Text style={styles.closeText}>Listo</Text>
             </Pressable>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -261,26 +315,65 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    backgroundColor: '#D95C27',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F2',
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    zIndex: 5,
   },
   headerInner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   backBtn: { padding: 8, marginRight: 8 },
-  backText: { fontSize: 26, color: '#fff', fontFamily: 'Inter' },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#fff',
+    color: '#111827',
     fontFamily: 'PlusJakartaSans-Bold',
   },
   content: { padding: 20, paddingBottom: 40 },
+  alertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F6EC',
+    borderWidth: 1,
+    borderColor: '#B9E6CB',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 4,
+  },
+  alertCheck: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#2FBF71',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  alertBody: { flex: 1 },
+  alertTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1B5E3B',
+    fontFamily: 'PlusJakartaSans-Bold',
+  },
+  alertText: {
+    fontSize: 13,
+    color: '#2E7D50',
+    fontFamily: 'Inter',
+    marginTop: 2,
+  },
   sectionLabel: {
     fontSize: 16,
     fontWeight: '700',
@@ -296,13 +389,23 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: '#F3C9B3',
+    shadowColor: '#D95C27',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  placeBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
   },
   placeBadge: {
     fontSize: 12,
     fontWeight: '800',
     color: '#D95C27',
     fontFamily: 'Inter',
-    marginBottom: 6,
   },
   placeName: {
     fontSize: 18,
@@ -312,11 +415,17 @@ const styles = StyleSheet.create({
   },
   placeDist: { fontSize: 14, color: '#777', fontFamily: 'Inter', marginTop: 4, marginBottom: 14 },
   callBtn: {
+    flexDirection: 'row',
     backgroundColor: '#D95C27',
     borderRadius: 20,
-    height: 44,
+    height: 46,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#D95C27',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   callBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: 'Inter' },
   contactRow: { marginBottom: 4 },
@@ -330,18 +439,26 @@ const styles = StyleSheet.create({
   },
   manageBtnText: { fontSize: 15, fontWeight: '700', color: '#444', fontFamily: 'Inter' },
   sendBtn: {
+    flexDirection: 'row',
     backgroundColor: '#E23B2E',
     borderRadius: 22,
-    height: 56,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 24,
+    shadowColor: '#E23B2E',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
-  sendBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', fontFamily: 'PlusJakartaSans-Bold' },
+  sendBtnText: { color: '#fff', fontSize: 17, fontWeight: '800', fontFamily: 'PlusJakartaSans-Bold' },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   modalSheet: {
     backgroundColor: '#fff',
